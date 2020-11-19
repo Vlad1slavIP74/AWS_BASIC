@@ -1,0 +1,58 @@
+
+service: basic-set-up
+app: basic-set-up
+org: vlad1slav
+
+frameworkVersion: '2'
+
+package:
+  individually: true
+  exclude:
+    - services/layers/**
+    - node_modules/**
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  memorySize: 512
+  # BucketNamePrefix: ${param:BucketNamePrefix}
+  # EnvironmentTagName: dev
+  # StackTagName: aws
+  # Version: ${param:Version}
+
+
+plugins:
+  # - serverless-plugin-typescript
+  - serverless-webpack
+  # - serverless-pseudo-parameters
+  # - serverless-mocha
+  # - serverless-dotenv-plugin
+  # - serverless-offline
+  # - serverless-plugin-layer-manager
+
+
+
+
+custom:
+    imports: ${file(./_imports.yml)}
+    projectName: aws     
+    env: ${file(./_environment.yml)}
+    # webpack:
+    #   includeModules: true
+layers: ${file(./services/layers/serverless.yml)}
+
+functions:
+  - ${file(./services/infrastructure/rds/src/_serverless.yml)}
+  - ${file(./services/identity/src/postConfirmation/_serverless.yml)}
+  - ${file(./services/identity/src/customMessage/_serverless.yml)}
+  - ${file(./services/infrastructure/sqs/src/_serverless.yml)}
+  - ${file(./services/core/functions/apollo/apollo.yml)}
+
+
+
+# 
+
+# outputs: 
+#   my-key: ${self:custom.PrivateSubnetA}

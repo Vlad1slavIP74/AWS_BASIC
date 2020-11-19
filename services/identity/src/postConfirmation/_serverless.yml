@@ -1,0 +1,37 @@
+fnPostConfirmationUserPool:
+  handler: services/identity/src/postConfirmation/index.handler
+  events:
+  - cognitoUserPool:
+      pool: ${param:UserPoolName}
+      trigger: PostConfirmation
+      existing: true
+  
+  name: user-pool-post-confirmation
+  description: add user to db
+  memorySize: 128
+  timeout: 6
+
+  # according o best practice 1 lambda = 1 role
+  #  rewrite soon
+  role: ${self:custom.imports.ApiServiceRoleArn}
+  vpc: 
+    securityGroupIds:
+      - ${self:custom.imports.SecurityGroup}
+    subnetIds:
+      - ${self:custom.imports.PrivateSubnetA}
+      - ${self:custom.imports.PublicSubnetA}
+  environment: 
+    DB_TYPE: ${self:custom.env.DB_TYPE}
+    DB_HOST: ${self:custom.env.DB_HOST}
+    DB_PORT: ${self:custom.env.DB_PORT}
+    DB_USER_NAME: ${self:custom.env.DB_USER_NAME}
+    DB_PASSWORD: ${self:custom.env.DB_PASSWORD}
+    DB_NAME: ${self:custom.env.DB_NAME}
+    USER_POOL_ID: ${self:custom.imports.UserPool}
+
+
+  layers:
+    - { Ref: TypeORMLambdaLayer }
+  package:
+    individually: true
+

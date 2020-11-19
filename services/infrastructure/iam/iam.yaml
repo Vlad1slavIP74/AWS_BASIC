@@ -1,0 +1,134 @@
+Parameters:
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+
+Resources: 
+  ApiServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - appsync.amazonaws.com
+              - lambda.amazonaws.com
+              - rds.amazonaws.com
+          Action: sts:AssumeRole
+      RoleName: !Sub ${StackTagName}-api-service-role-${EnvironmentTagName}
+      Policies:
+        - PolicyName: Access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - rds:*
+                  - rds-data:*
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:AdminSetUserSettings
+                  - cognito-idp:AdminDeleteUser
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - es:ESHttpPost
+                  - es:ESHttpGet
+                  - es:ESHttpPut
+                  - es:ESHttpDelete
+                Resource: "*"
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+              - Effect: Allow
+                Resource: "*"
+                Action: "*"
+
+
+  SQSLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - appsync.amazonaws.com
+              - lambda.amazonaws.com
+              - sqs.amazonaws.com
+          Action: sts:AssumeRole
+      RoleName: !Sub ${StackTagName}-api-service-role-sqs-${EnvironmentTagName}
+      Policies:
+        - PolicyName: Access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:AdminSetUserSettings
+                  - cognito-idp:AdminDeleteUser
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sqs:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - es:ESHttpPost
+                  - es:ESHttpGet
+                  - es:ESHttpPut
+                  - es:ESHttpDelete
+                Resource: "*"
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+              - Effect: Allow
+                Resource: "*"
+                Action: "*"
+
+Outputs:
+  ApiServiceRoleArn:
+    Value: !GetAtt ApiServiceRole.Arn
+    Export:
+      Name: !Sub ${StackTagName}-iam-service-role-${EnvironmentTagName}
+  SQSLambdaRoleArn:
+    Value: !GetAtt SQSLambdaRole.Arn
+    Export:
+      Name: !Sub ${StackTagName}-iam-service-role-sqs-${EnvironmentTagName}

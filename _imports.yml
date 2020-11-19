@@ -1,0 +1,24 @@
+###### SUBNET
+PrivateSubnetA: !ImportValue ${self:custom.projectName}-private-subnet-a-${self:provider.stage}-${self:provider.stage}
+PublicSubnetA: !ImportValue ${self:custom.projectName}-public-subnet-a-${self:provider.stage}-${self:provider.stage}
+
+SecurityGroup: !ImportValue ${self:custom.projectName}-sg-${self:provider.stage}
+
+
+###### AIM
+ApiServiceRoleArn: !ImportValue ${self:custom.projectName}-iam-service-role-${self:provider.stage}
+SQSLambdaRoleArn: !ImportValue ${self:custom.projectName}-iam-service-role-sqs-${self:provider.stage}
+
+
+###### UserPool
+UserPool: !ImportValue ${self:custom.projectName}-user-pool-${self:provider.stage}
+UserPoolArn: !ImportValue ${self:custom.projectName}-user-pool-arn-${self:provider.stage}
+
+
+###### SQS
+QueueURL: !ImportValue ${self:custom.projectName}-queue-url-${self:provider.stage}
+QueueARN: !ImportValue ${self:custom.projectName}-queue-arn-${self:provider.stage}
+QueueName: !ImportValue ${self:custom.projectName}-queue-name-${self:provider.stage}
+
+###### Auth
+ApiGatewayAuthorizer: !ImportValue ${self:custom.projectName}-api-getway-auth-${self:provider.stage}

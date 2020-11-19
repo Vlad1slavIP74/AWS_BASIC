@@ -1,0 +1,117 @@
+Parameters:
+  VPCZoneSegment:
+    Description: "VPC CIDR ZONE"
+    Type: String
+    Default: 10
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+
+Resources: 
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub ${VPCZoneSegment}.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+
+  PublicSubnetA:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Sub ${AWS::Region}a
+      CidrBlock: !Sub ${VPCZoneSegment}.0.0.0/24
+      MapPublicIpOnLaunch: true
+
+  PrivateSubnetA:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Sub ${AWS::Region}a
+      CidrBlock: !Sub ${VPCZoneSegment}.0.1.0/24
+      MapPublicIpOnLaunch: false
+  
+  InternetGateway: 
+    Type: AWS::EC2::InternetGateway
+  
+  AttachGateway: 
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicRouteTable: 
+    DependsOn: AttachGateway
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref VPC
+  
+  PublicDefaultRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicRouteAssociationA: 
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
+
+  PublicSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Sub ${AWS::Region}b
+      CidrBlock:  !Sub ${VPCZoneSegment}.0.2.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+  
+  PrivateSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Sub ${AWS::Region}b
+      CidrBlock: !Sub ${VPCZoneSegment}.0.3.0/24
+      MapPublicIpOnLaunch: false
+      VpcId: !Ref VPC
+
+  PublicRouteAssociationB: 
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetB
+
+Outputs:
+  VPC:
+    Description: VPC SERVICE NAME
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${StackTagName}-vpc-${EnvironmentTagName}-${EnvironmentTagName}
+  PublicSubnetB: 
+    Description: PublicSubnetB
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub ${StackTagName}-public-subnet-b-${EnvironmentTagName}-${EnvironmentTagName}
+  PrivateSubnetB:
+    Description: PrivateSubnetB
+    Value: !Ref PrivateSubnetB
+    Export: 
+      Name: !Sub ${StackTagName}-private-subnet-b${EnvironmentTagName}-${EnvironmentTagName}
+
+  PublicSubnetA: 
+    Description: PublicSubnetA
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub ${StackTagName}-public-subnet-a-${EnvironmentTagName}-${EnvironmentTagName}
+  PrivateSubnetA:
+    Description: PrivateSubnetA
+    Value: !Ref PrivateSubnetA
+    Export: 
+      Name: !Sub ${StackTagName}-private-subnet-a-${EnvironmentTagName}-${EnvironmentTagName}

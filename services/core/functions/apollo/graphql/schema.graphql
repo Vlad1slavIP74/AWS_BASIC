@@ -1,0 +1,32 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+enum RoleEnum {
+  ADMIN
+  USER
+}
+
+
+type Query {
+  getProfile(id: ID!): UserProfileType!
+}
+
+type Mutation {
+  dummyMutation(input: DummyInput!): Boolean!
+}
+
+input DummyInput {
+  firstInput: String!
+  secondInput: String!
+}
+
+type UserProfileType {
+  id: ID!
+  role: RoleEnum!
+  firstName: String!
+  lastName: String!
+  createdAt: String!
+  updatedAt: String!
+}

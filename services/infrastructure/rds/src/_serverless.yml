@@ -1,0 +1,27 @@
+adminListTalents:
+  handler: services/infrastructure/rds/src/index.initAll
+  name: name
+  description: Get talents list
+  memorySize: 128
+  timeout: 25
+  role: ${self:custom.imports.ApiServiceRoleArn}
+  vpc:
+    securityGroupIds:
+      - ${self:custom.imports.SecurityGroup}
+    subnetIds:
+      - ${self:custom.imports.PrivateSubnetA}
+      - ${self:custom.imports.PublicSubnetA}
+
+  environment: 
+    DB_TYPE: ${self:custom.env.DB_TYPE}
+    DB_HOST: ${self:custom.env.DB_HOST}
+    DB_PORT: ${self:custom.env.DB_PORT}
+    DB_USER_NAME: ${self:custom.env.DB_USER_NAME}
+    DB_PASSWORD: ${self:custom.env.DB_PASSWORD}
+    DB_NAME: ${self:custom.env.DB_NAME}
+
+  layers:
+    - { Ref: TypeORMLambdaLayer }
+  package:
+    individually: true
+

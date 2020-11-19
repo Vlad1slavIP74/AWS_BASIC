@@ -1,0 +1,40 @@
+apolloMonolith:
+  handler: services/core/functions/apollo/index.graphqlHandler
+  name: apollo-monolith 
+  description: apollo monolith
+  memorySize: 128
+  timeout: 10
+  role: ${self:custom.imports.ApiServiceRoleArn}
+  vpc:
+    securityGroupIds:
+      - ${self:custom.imports.SecurityGroup}
+    subnetIds:
+      - ${self:custom.imports.PrivateSubnetA}
+      - ${self:custom.imports.PublicSubnetA}
+
+  environment: 
+    DB_TYPE: ${self:custom.env.DB_TYPE}
+    DB_HOST: ${self:custom.env.DB_HOST}
+    DB_PORT: ${self:custom.env.DB_PORT}
+    DB_USER_NAME: ${self:custom.env.DB_USER_NAME}
+    DB_PASSWORD: ${self:custom.env.DB_PASSWORD}
+    DB_NAME: ${self:custom.env.DB_NAME}
+    LAMBDA: true
+  layers:
+    - { Ref: TypeORMLambdaLayer }
+    - { Ref: ApolloLambdaLayer }
+
+  events:
+    - http:
+        path: graphql
+        method: post
+        #  DO NOT CHANGE
+        integration: lambda-proxy
+        authorizer:
+          name: COGNITO_USER_POOL
+          type: COGNITO_USER_POOLS
+          # authorizerId: ${self:custom.imports.ApiGatewayAuthorizer}
+          arn:  ${self:custom.imports.UserPoolArn}
+            
+  package:
+    individually: true

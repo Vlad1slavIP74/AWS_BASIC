@@ -1,0 +1,6 @@
+DB_TYPE: postgres
+DB_HOST: aws-aurora-db-dev.cluster-cb42v9kkbhuo.us-east-1.rds.amazonaws.com
+DB_PORT: 5432
+DB_USER_NAME: postgres
+DB_PASSWORD: SOME_SECRET_PASSWORD_2020
+DB_NAME: aws

@@ -1,0 +1,44 @@
+Parameters: 
+  TopicName: 
+    Default: "MyAWSTopic"
+    Description: "Topic Name"
+    Type: "String"
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+
+Resources:
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: 'Serverless Alerts'
+      TopicName: !Sub ${TopicName}
+  AlarmTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn:
+      - AlarmTopic
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowServerlessFrameworkEnterpriseToPublish
+            Effect: Allow
+            Principal:
+              AWS: 
+                - !Ref AWS::AccountId
+            Action: 'sns:Publish'
+            Resource:
+              Ref: AlarmTopic
+      Topics:
+        - Ref: AlarmTopic
+Outputs:
+  SnsTopicArn:
+    Description: ARN for the SNS Alarm Topic
+    Value:
+      Ref: AlarmTopic
+    Export: 
+      Name: !Sub ${StackTagName}-sns-topic-${EnvironmentTagName}

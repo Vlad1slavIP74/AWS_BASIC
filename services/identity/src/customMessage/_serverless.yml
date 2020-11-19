@@ -1,0 +1,22 @@
+fnCustomMessageUserPool:
+  handler: services/identity/src/customMessage/index.handler
+  events:
+  - cognitoUserPool:
+      pool: ${param:UserPoolName}
+      trigger: CustomMessage
+      existing: true
+  
+  name: user-pool-custom-message-confirmation
+  description: send email
+  memorySize: 128
+  timeout: 6
+
+  # according o best practice 1 lambda = 1 role
+  #  rewrite soon
+  role: ${self:custom.imports.ApiServiceRoleArn}
+  environment: 
+    USER_POOL_ID: ${self:custom.imports.UserPool}
+    
+  package:
+    individually: true
+

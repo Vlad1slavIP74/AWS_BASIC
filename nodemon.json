@@ -1,0 +1,6 @@
+{
+    "watch": ["services/core/functions/apollo"],
+    "ext": "ts,json",
+    "ignore": ["services/core/functions/apollo/**/*.spec.ts"],
+    "exec": "ts-node ./services/core/functions/apollo/index.ts"
+  }

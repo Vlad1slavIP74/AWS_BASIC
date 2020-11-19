@@ -1,0 +1,23 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+
+type Query {
+  dummyQuery(itemId: ID!): DummyObject!
+}
+
+type Mutation {
+  dummyMutation(input: DummyInput!): Boolean!
+}
+
+input DummyInput {
+  firstInput: String!
+  secondInput: String!
+}
+
+type DummyObject {
+  firstItem: String!
+  secondItem: String!
+}

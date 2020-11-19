@@ -1,0 +1,174 @@
+Parameters:
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+  UserPoolName:
+    Type: String
+
+  # SecurityGroup:
+  #   Description: SecurityGroup
+  #   Type: String
+  # VPCSubnetA:
+  #   Description: Primary Subnet to be used for this DB instance.
+  #   Type: AWS::EC2::Subnet::Id
+  #   AllowedPattern: "[a-z0-9-]*"
+  # VPCSubnetB:
+  #   Description: Secondary Subnet to be used for this DB instance.
+  #   Type: AWS::EC2::Subnet::Id
+  #   AllowedPattern: "[a-z0-9-]*"
+  # VPCSubnetC:
+  #   Description: Thirdary Subnet to be used for this DB instance.
+  #   Type: AWS::EC2::Subnet::Id
+  #   AllowedPattern: "[a-z0-9-]*"
+  # LayersArn: 
+  #   Description: Sequelize LayersArn
+  #   Type: String
+
+Resources: 
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${UserPoolName}
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+      # LambdaConfig: 
+        # CustomMessage: !GetAtt FnCustomMessage.Arn 
+        # PostConfirmation: !GetAtt FnCreateUser.Arn
+
+      # Required custom attributes are not supported currently. 
+      # (Service: AWSCognitoIdentityProviderService; Status Code: 400; Error Code: InvalidParameterException; Request ID: 58aa026b-db07-4979-b519-d10b02988547; Proxy: null)
+      Schema:
+        -
+          Name: email
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: true
+          StringAttributeConstraints: 
+            MinLength: 0
+            MaxLength: 255
+        -
+          Name: firstName
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          # Required: true
+        - 
+          Name: lastName
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          # Required: true
+        - 
+          Name: role
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: false
+          # Required: true
+      AutoVerifiedAttributes:
+      - email
+      UsernameAttributes: 
+      - email
+      EmailVerificationMessage: "{####}"
+      EmailVerificationSubject: "Welcome to the aws"
+      SmsAuthenticationMessage: "Your authentication code is {####}. "
+ 
+
+  ######### CognitoUserPoolClient
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${StackTagName}-aws-user-pool-client
+      UserPoolId:
+        Ref: UserPool
+      ExplicitAuthFlows:
+        - ADMIN_NO_SRP_AUTH
+      GenerateSecret: false
+      # Important: custom ReadAttributes and WriteAttributes WITH prefix "custom:"
+      ReadAttributes: 
+        - "custom:firstName"
+        - "custom:lastName"
+        - "custom:role"
+        - email
+      RefreshTokenValidity: 30
+      WriteAttributes: 
+        - "custom:firstName"
+        - "custom:lastName"
+        - "custom:role"
+        - email
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: Identity-aws
+      AllowUnauthenticatedIdentities: true
+      CognitoIdentityProviders: 
+        - ClientId: 
+            Ref: CognitoUserPoolClient
+          ProviderName:
+            Fn::GetAtt: [ UserPool, ProviderName ]
+            
+  ######### IAM roles
+  CognitoIdentityPoolRoles:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId:
+        Ref: IdentityPool
+      Roles:
+        authenticated:
+          Fn::GetAtt: [CognitoAuthRole, Arn]
+        unauthenticated:
+          Fn::GetAtt: [CognitoUnAuthRole, Arn]
+
+  CognitoAuthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+                
+  CognitoUnAuthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: 'unauthenticated'
+
+
+
+Outputs:
+  UserPool:
+    Value: !Ref UserPool
+    Export: 
+      Name: !Sub ${StackTagName}-user-pool-${EnvironmentTagName}
+  UserPoolArn: 
+    Value: !GetAtt UserPool.Arn
+    Export:
+      Name: !Sub ${StackTagName}-user-pool-arn-${EnvironmentTagName}

@@ -1,0 +1,78 @@
+Parameters:
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+  UserPool: 
+    Type: String
+
+Resources: 
+  MyRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Description: A test API
+      Name: GraphQl
+
+  DevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: dev
+      Description: dev Stage
+      RestApiId: !Ref MyRestApi
+      DeploymentId: !Ref Deployment
+
+
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      AuthorizerResultTtlInSeconds: 300
+      IdentitySource: method.request.header.x-api-key
+      Name: Cognito
+      RestApiId:
+        Ref: MyRestApi
+      Type: COGNITO_USER_POOLS
+      ProviderARNs: 
+        - !Ref UserPool
+    
+
+  OptionsMethod:
+     Type: AWS::ApiGateway::Method
+     Properties:
+       RestApiId: !Ref MyRestApi
+       ResourceId: !GetAtt MyRestApi.RootResourceId
+       HttpMethod: OPTIONS
+       AuthorizationType: NONE
+       Integration:
+         Type: MOCK
+         IntegrationResponses:
+         - StatusCode: 200
+           ResponseParameters:
+             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+             method.response.header.Access-Control-Allow-Methods: "'DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT'"
+             method.response.header.Access-Control-Allow-Origin: "'*'"
+       MethodResponses:
+       - StatusCode: 200
+         ResponseParameters:
+             method.response.header.Access-Control-Allow-Headers: true
+             method.response.header.Access-Control-Allow-Methods: true
+             method.response.header.Access-Control-Allow-Origin: true
+
+  Deployment:
+    DependsOn: OptionsMethod
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref MyRestApi
+      Description: My deployment
+      StageName: DummyStage
+
+
+Outputs:
+  ApiGatewayAuthorizer:
+    Description: ApiGatewayAuthorizer
+    Value:
+      Ref: ApiGatewayAuthorizer
+    Export:
+      Name: !Sub ${StackTagName}-api-getway-auth-${EnvironmentTagName}

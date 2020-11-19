@@ -1,0 +1,102 @@
+Parameters:
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+  VPC:
+    Description: VPC Service Name
+    Type: String
+  PrivateSubnetA:
+    Description: Primary Subnet to be used for this DB instance.
+    Type: AWS::EC2::Subnet::Id
+    AllowedPattern: "[a-z0-9-]*"
+  PrivateSubnetB:
+    Description: Secondary Subnet to be used for this DB instance.
+    Type: AWS::EC2::Subnet::Id
+    AllowedPattern: "[a-z0-9-]*"
+  # TypeORM: 
+  #   Description: TypeORM LayersArn
+  #   Type: String
+    # Default: arn:aws:lambda:us-east-1:086719537776:layer:typeORM:1
+
+Resources:
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub DBSecret
+      Description: RDS database auto-generated user password
+      SecretString: '{"username":"postgres","password":"SOME_SECRET_PASSWORD_2020"}'
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Group of Subnets
+      DBSubnetGroupName: !Sub ${StackTagName}-aurora-group-${EnvironmentTagName}
+      SubnetIds:
+        - !Ref PrivateSubnetB
+        - !Ref PrivateSubnetA
+
+  RDSCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DBClusterIdentifier: !Sub ${StackTagName}-aurora-db-${EnvironmentTagName}
+      DBSubnetGroupName: !Sub ${StackTagName}-aurora-group-${EnvironmentTagName}
+      MasterUsername:
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref DBSecret,
+            ":SecretString:username}}",
+          ],
+        ]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DBSecret, ':SecretString:password}}' ]]
+      # MasterUserPassword: "{{resolve:ssm-secure:RDSAdminCreds:1}}"
+      #
+      DatabaseName: aws 
+      Engine: aurora-postgresql
+      EngineVersion: 10.7
+      EnableHttpEndpoint: true
+      VpcSecurityGroupIds: 
+        - !Ref SecurityGroup
+      EngineMode: serverless
+      # EnableIAMDatabaseAuthentication: true
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: 2
+        MaxCapacity: 2
+        SecondsUntilAutoPause: 86400
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: security group aws
+      GroupName: !Sub ${StackTagName}-sg-${EnvironmentTagName}
+      VpcId: !Ref VPC
+
+  TestSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroup
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref SecurityGroup
+
+
+
+Outputs:
+  DBClusterIdentifier:
+    Description: DBClusterIdentifier
+    Value: !Ref RDSCluster
+  DBSecret:
+    Description: DBSecret
+    Value: !Ref DBSecret
+  SecurityGroup:
+    Description: SecurityGroup
+    Value: !Ref SecurityGroup
+    Export:
+      Name: !Sub ${StackTagName}-sg-${EnvironmentTagName}

@@ -1,0 +1,99 @@
+
+service: service-template
+app: basic-set-up
+org: vlad1slav
+
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  memorySize: 512
+  BucketNamePrefix: ${param:BucketNamePrefix}
+  EnvironmentTagName: dev
+  StackTagName: aws
+  Version: ${param:Version}
+  UserPoolName: ${param:UserPoolName}
+
+plugins:
+  - serverless-pseudo-parameters
+  - serverless-mocha
+  - serverless-dotenv-plugin
+  - serverless-offline
+  - serverless-aws-nested-stacks
+  - serverless-plugin-layer-manager
+
+custom:
+    serverless-mocha-plugin:
+      testTemplate: templates/test-template.ejs
+      functionTemplate: templates/function-template.ejs
+
+    nested-stacks:
+      location: ./                      # Where do you keep your nested stacks?
+      stacks:
+        - id: VPC                  # Logical ID (Required)
+          template: services/infrastructure/vpc/vpc.yaml            # Template file name (Required)
+          enabled: true                            # optional flag for enabled/disabling substack
+          timeout: 60                              # Minutes before stack creation times out.
+          parameters:                              # Stack parameters as key value pairs
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+            VPCZoneSegment: 10
+        - id: RDS
+          template: services/infrastructure/rds/rds.yaml
+          enabled: true
+          parameters: 
+            VPC: !GetAtt VPC.Outputs.VPC
+            PrivateSubnetA: !GetAtt VPC.Outputs.PrivateSubnetA
+            PrivateSubnetB: !GetAtt VPC.Outputs.PrivateSubnetB
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+        - id: COGNITO
+          template: services/identity/cognito/resource/cognito.yaml
+          enabled: true
+          timeout: 60
+          parameters:
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+            UserPoolName: ${self:provider.UserPoolName}
+        - id: ApiGetWay
+          template: services/infrastructure/getway/getway.yaml
+          parameters: 
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+            UserPool: !GetAtt COGNITO.Outputs.UserPoolArn
+        - id: IAM
+          template: services/infrastructure/iam/iam.yaml
+          parameters: 
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+        - id: S3
+          template: services/infrastructure/s3/s3.yaml
+          parameters: 
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+            BucketNamePrefix: aws
+        - id: SQS
+          template: services/infrastructure/sqs/sqs.yaml
+          parameters: 
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+            # AlarmEmail: SHOULD BE ADDED IN PRODUCTION
+        - id: SNS
+          template: services/infrastructure/sns/sns.yaml
+          parameters: 
+            EnvironmentTagName: ${param:EnvironmentTagName}
+            StackTagName: ${param:StackTagName}
+
+    
+
+package:
+  individually: true
+  exclude:
+    - services/layers/**
+    - node_modules/**
+
+# outputs: 
+#   my-key: ${self:custom.PrivateSubnetA}

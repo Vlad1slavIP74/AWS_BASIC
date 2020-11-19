@@ -1,0 +1,90 @@
+Parameters:
+  StackTagName:
+    Description: "Application Name"
+    Type: String
+  EnvironmentTagName:
+    Description: "Project Name"
+    Type: String
+    Default: dev
+  BucketNamePrefix:
+    Type: String
+
+Conditions:
+  IsDevelopment: !Equals
+    - !Sub ${EnvironmentTagName}
+    - dev
+
+
+
+Resources: 
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    # MUST BE ENABLED FOR PRODUCTION
+    # DeletionPolicy: Retain
+    Properties:
+      BucketName: !If
+        - IsDevelopment
+        - !Sub ${BucketNamePrefix}-public-assets-${EnvironmentTagName}
+        - !Sub ${BucketNamePrefix}-assets
+      AccessControl: BucketOwnerFullControl
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ["*"]
+            AllowedMethods: [HEAD, GET, PUT, POST, DELETE]
+            AllowedOrigins: ["*"]
+            ExposedHeaders:
+              [
+                "x-amz-server-side-encryption",
+                "x-amz-request-id",
+                "x-amz-id-2",
+                "ETag",
+              ]
+            Id: !Sub ${BucketNamePrefix}-audio-cors-policy
+            MaxAge: "3000"
+  S3BucketBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:DeleteObject"
+            Effect: "Allow"
+            Resource:
+              - !Sub "arn:aws:s3:::${S3Bucket}/protected/${!cognito-identity.amazonaws.com:sub}/*"
+              - !Sub "arn:aws:s3:::${S3Bucket}/private/${!cognito-identity.amazonaws.com:sub}/*"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+          - Action:
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:DeleteObject"
+            Effect: "Allow"
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/public/*"
+            Principal:
+              AWS: "*"
+          - Action:
+              - "s3:GetObject"
+              - "s3:PutObject"
+            Effect: "Allow"
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/protected/*"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+          - Action:
+              - "s3:ListBucket"
+            Effect: "Allow"
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Condition:
+              StringLike:
+                s3:prefix:
+                  - "public/"
+                  - "public/*"
+                  - "protected/"
+                  - "protected/*"
+                  - "private/${cognito-identity.amazonaws.com:sub}/"
+                  - "private/${cognito-identity.amazonaws.com:sub}/*"
+

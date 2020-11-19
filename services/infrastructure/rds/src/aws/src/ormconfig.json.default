@@ -1,0 +1,24 @@
+{
+    "type": "postgres",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "username": "aws",
+    "password": "aws",
+    "database": "aws",
+    "synchronize": false,
+    "logging": false,
+    "entities": [
+       "./entity/**/*.ts"
+    ],
+    "migrations": [
+       "./migration/**/*.ts"
+    ],
+    "subscribers": [
+       "./subscriber/**/*.ts"
+    ],
+    "cli": {
+       "entitiesDir": "./entity",
+       "migrationsDir": "./migration",
+       "subscribersDir": "./subscriber"
+    }
+ }
